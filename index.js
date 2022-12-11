@@ -15,15 +15,16 @@ app.use(cors({
 
 let sessionLogin = null;
 
-let postAuthorPatternConventer = (id) => {
+let userInfoReducer = (id) => {
     return {
+        id: users[id].id,
         name: users[id].name,
         surname: users[id].surname,
         avatar: users[id].avatar,
     }
 };
 
-let users = [
+const users = [
     {
         id: 0,
         name: `Jegoras`,
@@ -74,7 +75,7 @@ let users = [
         name: `Alex`,
         surname: `Drake`,
         login: 'cooldrake',
-        avatar: `https://sticker-collection.com/stickers/plain/johnnysinsbrazzers/512/c912f70a-f67f-4fe1-af3c-10b5c590047ffile_368359.webp`,
+        avatar: `https://i.imgur.com/uoOpu4n.png`,
         banner: `https://t4.ftcdn.net/jpg/04/67/92/91/360_F_467929117_kAYW6tFAxAFE1PteYPbSpguPQNNNfVkr.jpg`,
         status: 'playing Call of Duty: Modern Warfare',
         location: {
@@ -131,23 +132,23 @@ let users = [
     },
 ];
 
-let usersPosts = {
+const usersPosts = {
     "posts-user-0": [
         {
             id: 1,
-            author: postAuthorPatternConventer(1),
+            author: userInfoReducer(1),
             message: `Hey. How are you feeling today?`,
             likeCount: 20
         },
         {
             id: 2,
-            author: postAuthorPatternConventer(6),
+            author: userInfoReducer(6),
             message: `I finished my album. Go check it out!`,
             likeCount: 34
         },
         {
             id: 3,
-            author: postAuthorPatternConventer(3),
+            author: userInfoReducer(3),
             message: `I'm going on a picnic. Do you wanna join?`,
             likeCount: 1
         },
@@ -160,7 +161,62 @@ let usersPosts = {
     "posts-user-6": [],
 };
 
-let usersResponseCreator = (page, count) => {
+const usersDialogsStorage = {
+    'user-0': [0, 1, 2, 3, 4],
+    'user-1': [0],
+    'user-2': [1],
+    'user-3': [2],
+    'user-4': [3],
+    'user-5': [4],
+    'user-6': [],
+
+};
+
+const dialogs = [
+    {
+        dialogId: 0,
+        members: [userInfoReducer(0), userInfoReducer(1)],
+        messages: [
+            {id: 0, authorId: 1, content: `Morning`},
+            {id: 1, authorId: 1, content: `What about our business?`},
+        ],
+    },
+    {
+        dialogId: 1,
+        members: [userInfoReducer(0), userInfoReducer(2)],
+        messages: [
+            {id: 0, authorId: 2, content: `Are you free?`},
+            {id: 1, authorId: 0, content: `Yup`},
+            {id: 2, authorId: 2, content: `Let's meet in an hour`},
+            {id: 3, authorId: 0, content: `Deal`},
+        ],
+    },
+    {
+        dialogId: 2,
+        members: [userInfoReducer(0), userInfoReducer(3)],
+        messages: [
+            {id: 0, authorId: 3, content: `Wanna play? I'll invite u`},
+            {id: 1, authorId: 0, content: `Sure. I'll be right in`},
+        ],
+    },
+    {
+        dialogId: 3,
+        members: [userInfoReducer(0), userInfoReducer(4)],
+        messages: [
+            {id: 0, authorId: 0, content: `Do you remember that we have a meeting today?`},
+            {id: 1, authorId: 4, content: `Yh. I won't be late`},
+        ],
+    },
+    {
+        dialogId: 4,
+        members: [userInfoReducer(0), userInfoReducer(5)],
+        messages: [
+            {id: 0, authorId: 5, content: `Come to the exhibition today at 7 pm!`},
+        ]
+    },
+];
+
+const usersResponseCreator = (page, count) => {
     let items = [];
     [...users].splice(page * count - count, count).map(i => {
         items.push({
@@ -183,7 +239,7 @@ let usersResponseCreator = (page, count) => {
     };
 };
 
-let profileResponseCreator = (user) => {
+const profileResponseCreator = (user) => {
     let items = {
         id: user.id,
         name: user.name,
@@ -205,7 +261,7 @@ let profileResponseCreator = (user) => {
     };
 }
 
-let loginResponseCreator = (user, loginStatus) => {
+const loginResponseCreator = (user, loginStatus) => {
     if (loginStatus) {
         return {
             resultCode: 0,
@@ -214,8 +270,9 @@ let loginResponseCreator = (user, loginStatus) => {
                 login: user.login,
                 name: user.name,
                 surname: user.surname,
-            }
-        }
+            },
+            dialogs: dialogsResponseCreator(user).dialogs
+        };
     } else {
         return {
             resultCode: 1,
@@ -225,7 +282,7 @@ let loginResponseCreator = (user, loginStatus) => {
 
 };
 
-let followResponseCreator = (method, loginStatus, followStatus = null) => {
+const followResponseCreator = (method, loginStatus, followStatus = null) => {
     if (method === 'GET') {
         return {
             value: followStatus
@@ -246,7 +303,7 @@ let followResponseCreator = (method, loginStatus, followStatus = null) => {
     }
 }
 
-let statusResponseCreator = (method, userProfileStatus, loginStatus = false) => {
+const statusResponseCreator = (method, userProfileStatus, loginStatus = false) => {
     if (method === 'GET') {
         return {
             value: userProfileStatus
@@ -268,6 +325,17 @@ let statusResponseCreator = (method, userProfileStatus, loginStatus = false) => 
     }
 }
 
+const dialogsResponseCreator = (user) => {
+    let userDialogs = [];
+
+    usersDialogsStorage[`user-${user.id}`].map((i) => userDialogs.push(dialogs[i]));
+
+    return {
+        resultCode: 0,
+        dialogs: userDialogs
+    };
+}
+
 app.get('/', (req, res) => {
     res.send('ReactSocial API');
 });
@@ -284,13 +352,13 @@ app.get('/api/1.0/users', (req, res) => {
 });
 
 app.get('/api/1.0/profile/:id', (req, res) => {
-	const user = users.find(u => u.id === +req.params.id);
+    const user = users.find(u => u.id === +req.params.id);
 
-	if (user) {
-		res.json(profileResponseCreator(user));
-	} else {
-		res.json({message: 'No such /profile method.'});
-	}
+    if (user) {
+        res.json(profileResponseCreator(user));
+    } else {
+        res.json({message: 'No such /profile method.'});
+    }
 });
 
 app.get('/api/1.0/profile/status/:id', (req, res) => {
@@ -317,12 +385,12 @@ app.put('/api/1.0/profile/status/', (req, res) => {
 app.post('/api/1.0/profile/posts', (req, res) => {
     if (sessionLogin) {
         let user = users.find(u => u.login === sessionLogin);
-        let posts = usersPosts[`posts-user-${req.body.id}`]
+        let posts = usersPosts[`posts-user-${req.body.id}`];
 
         posts.push(
             {
                 id: posts.length + 1,
-                author: postAuthorPatternConventer(user.id),
+                author: userInfoReducer(user.id),
                 message: req.body.message,
                 likeCount: 0
             }
@@ -378,7 +446,6 @@ app.post('/api/1.0/follow/:id', (req, res) => {
     let userToFollow = users.find(u => u.id === +req.params.id);
 
     if (sessionLogin) {
-        let user = users.find(u => u.login === sessionLogin);
         userToFollow.isFollowed = true;
         res.json(followResponseCreator('POST', true, userToFollow.isFollowed));
     } else {
@@ -394,6 +461,26 @@ app.delete('/api/1.0/follow/:id', (req, res) => {
         res.json(followResponseCreator('DELETE', true, userToFollow.isFollowed));
     } else {
         res.json(followResponseCreator('DELETE', false));
+    }
+});
+
+app.post('/api/1.0/dialogs', (req, res) => {
+    let {dialogId, content} = req.body;
+
+    if (sessionLogin) {
+        let user = users.find(u => u.login === sessionLogin);
+
+        dialogs[dialogId].messages.push(
+            {
+                id: dialogs[dialogId].messages.length,
+                authorId: user.id,
+                content: content
+            }
+        );
+
+        res.json(dialogsResponseCreator(user));
+    } else {
+        res.json({resultCode: 1, message: "You're not authorized"});
     }
 });
 
